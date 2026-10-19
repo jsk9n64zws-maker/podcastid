@@ -146,6 +146,7 @@
     <button data-tab="timers">Taimerid</button>
     <button data-tab="rec">Salvestused</button>
     <button data-tab="shows">Minu saated</button>
+    <button data-tab="podcasts">Podcastid</button> 
   </nav>
 </header>
 <div id="offline">Võrguühendus puudub – kuulata saab telefoni laaditud salvestusi.</div>
@@ -651,8 +652,13 @@ function renderShows(main) {
   bindKeep(main);
   main.querySelectorAll("[data-rer]").forEach((c) => c.onchange = async () => { config.shows.find((s) => s.id == c.dataset.rer).reruns = c.checked; await saveConfig(); syncBrowserShows(); });
 }
+// --- podcastid ---
+function renderPodcasts(main) {
+  main.innerHTML = `<h2>Podcastid</h2>
+    <p>Siia tulevad sinu valitud podcastid.</p>`;
+}
 
-// --- taimerid ---
+  // --- taimerid ---
 function renderTimers(main) {
   main.innerHTML = `<h2>Uus taimer</h2>
     <div class="timer-form">
@@ -686,7 +692,7 @@ function renderTimers(main) {
 function render() {
   document.querySelectorAll("nav button").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
   const main = $("#main");
-  ({ kava: renderKava, rec: renderRec, shows: renderShows, timers: renderTimers })[tab](main);
+ ({ kava: renderKava, rec: renderRec, shows: renderShows, podcasts: renderPodcasts, timers: renderTimers })[tab](main);
   renderStatus();
 }
 
