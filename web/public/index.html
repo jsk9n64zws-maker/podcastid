@@ -653,10 +653,74 @@ function renderShows(main) {
   main.querySelectorAll("[data-rer]").forEach((c) => c.onchange = async () => { config.shows.find((s) => s.id == c.dataset.rer).reruns = c.checked; await saveConfig(); syncBrowserShows(); });
 }
 // --- podcastid ---
-function renderPodcasts(main) {
+ async function renderPodcasts(main) {
   main.innerHTML = `<h2>Podcastid</h2>
-    <p>Geeniuse digisaade</p>`;
-}
+    <p>Geeniuse digisaade</p>
+    <p>Laadin uusi episoode...</p>`;
+
+  const response = await fetch("/api/podcast");
+  const xmlText = await response.text();
+
+  const xml = new DOMParser().parseFromString(
+    xmlText,
+    "application/xml"
+  );
+
+  const cutoff = new Date("2026-10-20T00:00:00+03:00");
+
+  const episodes = [...xml.querySelectorAll("item")]
+    .filter(item => {
+      const date = new Date(
+        item.querySelector("pubDate")?.textContent || ""
+      );
+      return date >= cutoff;
+    });
+
+  if (!episodes.length) {
+    main.innerHTML = `<h2>Podcastid</h2>
+      <p><b>Geeniuse digisaade</b></p>
+      <p>Uusi episoode veel ei ole.</p>`;
+    return;
+  }
+
+  main.innerHTML = `<h2>Podcastid</h2>
+    <p><b>Geeniuse digisaade</b></p>`;
+
+  for (const item of episodes) {
+    const title =
+      item.querySelector("title")?.textContent || "Uus episood";
+
+    const pubDate =
+      item.querySelector("pubDate")?.textContent || "";
+
+    const audio =
+      item.querySelector("enclosure")?.getAttribute("url");
+
+    const box = document.createElement("div");
+    box.className = "card";
+
+    const heading = document.createElement("h3");
+    heading.textContent = title;
+    box.appendChild(heading);
+
+    if (pubDate) {
+      const date = document.createElement("p");
+      date.textContent =
+        new Date(pubDate).toLocaleDateString("et-EE");
+      box.appendChild(date);
+    }
+
+    if (audio) {
+      const player = document.createElement("audio");
+      player.controls = true;
+      player.preload = "none";
+      player.src = audio;
+      box.appendChild(player);
+    }
+
+    main.appendChild(box);
+  }
+   }
 
   // --- taimerid ---
 function renderTimers(main) {
