@@ -653,74 +653,119 @@ function renderShows(main) {
   main.querySelectorAll("[data-rer]").forEach((c) => c.onchange = async () => { config.shows.find((s) => s.id == c.dataset.rer).reruns = c.checked; await saveConfig(); syncBrowserShows(); });
 }
 // --- podcastid ---
- async function renderPodcasts(main) {
-  main.innerHTML = `<h2>Podcastid</h2>
-    <p>Geeniuse digisaade</p>
-    <p>Laadin uusi episoode...</p>`;
-
-  const response = await fetch("/api/podcast");
-  const xmlText = await response.text();
-
-  const xml = new DOMParser().parseFromString(
-    xmlText,
-    "application/xml"
-  );
-
+async function renderPodcasts(main) {
   const cutoff = new Date("2026-10-20T00:00:00+03:00");
 
-  const episodes = [...xml.querySelectorAll("item")]
-    .filter(item => {
-      const date = new Date(
-        item.querySelector("pubDate")?.textContent || ""
-      );
-      return date >= cutoff;
-    });
-
-  if (!episodes.length) {
-    main.innerHTML = `<h2>Podcastid</h2>
-      <p><b>Geeniuse digisaade</b></p>
-      <p>Uusi episoode veel ei ole.</p>`;
-    return;
-  }
+  const podcasts = [
+    {
+      id: "geenius",
+      name: "Geeniuse digisaade"
+    },
+    {
+      id: "poliitikaguru",
+      name: "Poliitikaguru"
+    }
+  ];
 
   main.innerHTML = `<h2>Podcastid</h2>
-    <p><b>Geeniuse digisaade</b></p>`;
+    <p>Laadin uusi episoode...</p>`;
 
-  for (const item of episodes) {
-    const title =
-      item.querySelector("title")?.textContent || "Uus episood";
+  const content = document.createElement("div");
 
-    const pubDate =
-      item.querySelector("pubDate")?.textContent || "";
+  for (const podcast of podcasts) {
+    const section = document.createElement("section");
 
-    const audio =
-      item.querySelector("enclosure")?.getAttribute("url");
+    const podcastTitle = document.createElement("h3");
+    podcastTitle.textContent = podcast.name;
+    section.appendChild(podcastTitle);
 
-    const box = document.createElement("div");
-    box.className = "card";
+    try {
+      const response = await fetch(
+        `/api/podcast?id=${encodeURIComponent(podcast.id)}`
+      );
 
-    const heading = document.createElement("h3");
-    heading.textContent = title;
-    box.appendChild(heading);
+      if (!response.ok) {
+        throw new Error("Podcasti laadimine ebaõnnestus");
+      }
 
-    if (pubDate) {
-      const date = document.createElement("p");
-      date.textContent =
-        new Date(pubDate).toLocaleDateString("et-EE");
-      box.appendChild(date);
+      const xmlText = await response.text();
+
+      const xml = new DOMParser().parseFromString(
+        xmlText,
+        "application/xml"
+      );
+
+      const episodes = [...xml.querySelectorAll("item")]
+        .filter(item => {
+          const date = new Date(
+            item.querySelector("pubDate")?.textContent || ""
+          );
+
+          return !Number.isNaN(date.getTime()) &&
+            date >= cutoff;
+        });
+
+      if (!episodes.length) {
+        const empty = document.createElement("p");
+        empty.textContent = "Uusi episoode veel ei ole.";
+        section.appendChild(empty);
+      }
+
+      for (const item of episodes) {
+        const title =
+          item.querySelector("title")?.textContent ||
+          "Uus episood";
+
+        const pubDate =
+          item.querySelector("pubDate")?.textContent || "";
+
+        const audio =
+          item.querySelector("enclosure")
+            ?.getAttribute("url");
+
+        const box = document.createElement("div");
+        box.className = "card";
+
+        const heading = document.createElement("h3");
+        heading.textContent = title;
+        box.appendChild(heading);
+
+        if (pubDate) {
+          const date = document.createElement("p");
+
+          date.textContent =
+            new Date(pubDate)
+              .toLocaleDateString("et-EE");
+
+          box.appendChild(date);
+        }
+
+        if (audio) {
+          const player =
+            document.createElement("audio");
+
+          player.controls = true;
+          player.preload = "none";
+          player.src = audio;
+
+          box.appendChild(player);
+        }
+
+        section.appendChild(box);
+      }
+    } catch (error) {
+      const message = document.createElement("p");
+      message.textContent =
+        "Podcasti ei õnnestunud praegu laadida.";
+      section.appendChild(message);
     }
 
-    if (audio) {
-      const player = document.createElement("audio");
-      player.controls = true;
-      player.preload = "none";
-      player.src = audio;
-      box.appendChild(player);
-    }
-
-    main.appendChild(box);
+    content.appendChild(section);
   }
-   }
+
+  main.innerHTML = `<h2>Podcastid</h2>`;
+  main.appendChild(content);
+}
 
   // --- taimerid ---
 function renderTimers(main) {
